@@ -1,42 +1,51 @@
-# This script extracts the human data from the original dataset and saves it in a new CSV file with 10 separate columns for each number in the sequence.
+"""Extract the ten test-trial choices from the human participant data."""
 
-import pandas as pd
 from pathlib import Path
 
-# File paths
-data_dir = Path(r"D:\personal projects\humanVsComputerGeneration\Data")
-input_file = data_dir / "human_data.csv"
-output_file = data_dir / "human_sequences.csv"
+import pandas as pd
 
-# Load the original dataset
-df = pd.read_csv(input_file)
 
-# Extract the test trial sequences
-sequences = df["number_choices_test_trials"].dropna()
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "Data"
+INPUT_FILE = DATA_DIR / "human_data.csv"
+OUTPUT_FILE = DATA_DIR / "human_sequences.csv"
+SEQUENCE_COLUMN = "number_choices_test_trials"
+SEQUENCE_LENGTH = 10
 
-# Split each sequence into 10 separate numbers
-split_sequences = sequences.apply(
-    lambda x: [int(n.strip()) for n in str(x).split(",")]
-)
 
-# Verify that every sequence contains exactly 10 numbers
-invalid = split_sequences[split_sequences.apply(len) != 10]
+def extract_human_sequences(input_file: Path = INPUT_FILE) -> pd.DataFrame:
+    """Return validated human sequences using label 1 for human."""
+    data = pd.read_csv(input_file)
+    if SEQUENCE_COLUMN not in data:
+        raise ValueError(f"Required column {SEQUENCE_COLUMN!r} is missing from {input_file}.")
 
-if not invalid.empty:
-    raise ValueError(
-        f"Found {len(invalid)} sequences that do not contain exactly 10 numbers."
-    )
+    sequences = data[SEQUENCE_COLUMN].dropna().astype(str)
+    parsed = []
+    for row_number, sequence in sequences.items():
+        try:
+            values = [int(value.strip()) for value in sequence.split(",")]
+        except ValueError as exc:
+            raise ValueError(f"Invalid sequence at input row {row_number + 2}.") from exc
+        if len(values) != SEQUENCE_LENGTH:
+            raise ValueError(
+                f"Expected {SEQUENCE_LENGTH} values at input row {row_number + 2}; found {len(values)}."
+            )
+        if any(value < 1 or value > 9 for value in values):
+            raise ValueError(f"Values must be between 1 and 9 at input row {row_number + 2}.")
+        parsed.append(values)
 
-# Create a DataFrame with 10 columns
-columns = [f"number_{i}" for i in range(1, 11)]
-output_df = pd.DataFrame(split_sequences.tolist(), columns=columns)
+    columns = [f"number_{index}" for index in range(1, SEQUENCE_LENGTH + 1)]
+    result = pd.DataFrame(parsed, columns=columns)
+    result["label"] = 1
+    return result
 
-# Add labels: 1 = human-generated, 0 = computer-generated
-output_df["label"] = 1
 
-# Save to CSV
-output_df.to_csv(output_file, index=False)
+def main() -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    result = extract_human_sequences()
+    result.to_csv(OUTPUT_FILE, index=False)
+    print(f"Saved {len(result):,} human sequences to {OUTPUT_FILE}")
 
-print(f"Successfully saved {len(output_df)} sequences.")
-print(f"Output file: {output_file}")
-print(output_df.head())
+
+if __name__ == "__main__":
+    main()

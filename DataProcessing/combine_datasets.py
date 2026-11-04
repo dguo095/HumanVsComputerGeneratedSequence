@@ -1,41 +1,50 @@
+"""Combine the labeled human and computer sequence tables."""
 
-import pandas as pd
 from pathlib import Path
 
-# Data directory
-data_dir = Path(r"D:\personal projects\humanVsComputerGeneration\Data")
+import pandas as pd
 
-# Input files
-human_file = data_dir / "human_sequences.csv"
-computer_file = data_dir / "computer_sequences.csv"
 
-# Output file
-output_file = data_dir / "combined_dataset.csv"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "Data"
+HUMAN_FILE = DATA_DIR / "human_sequences.csv"
+COMPUTER_FILE = DATA_DIR / "computer_sequences.csv"
+OUTPUT_FILE = DATA_DIR / "combined_dataset.csv"
+SEQUENCE_COLUMNS = [f"number_{index}" for index in range(1, 11)]
+EXPECTED_COLUMNS = SEQUENCE_COLUMNS + ["label"]
 
-# Load datasets
-human_df = pd.read_csv(human_file)
-computer_df = pd.read_csv(computer_file)
 
-# Combine datasets
-combined_df = pd.concat(
-    [human_df, computer_df],
-    ignore_index=True
-)
+def combine_datasets(
+    human_file: Path = HUMAN_FILE, computer_file: Path = COMPUTER_FILE
+) -> pd.DataFrame:
+    """Load, validate, concatenate, and reproducibly shuffle both sources."""
+    human = pd.read_csv(human_file)
+    computer = pd.read_csv(computer_file)
+    for name, frame, label in (
+        ("human", human, 1),
+        ("computer", computer, 0),
+    ):
+        if list(frame.columns) != EXPECTED_COLUMNS:
+            raise ValueError(f"Unexpected columns in {name} data: {list(frame.columns)}")
+        if not frame["label"].eq(label).all():
+            raise ValueError(f"{name} data must use label {label}.")
+        values = frame[SEQUENCE_COLUMNS]
+        if values.isna().any().any() or not values.apply(
+            lambda column: column.between(1, 9).all()
+        ).all():
+            raise ValueError(f"{name} sequences must contain values from 1 to 9.")
 
-# Shuffle rows reproducibly
-combined_df = combined_df.sample(
-    frac=1,
-    random_state=42
-).reset_index(drop=True)
+    combined = pd.concat([human, computer], ignore_index=True)
+    return combined.sample(frac=1, random_state=42).reset_index(drop=True)
 
-# Save combined dataset
-combined_df.to_csv(output_file, index=False)
 
-# Display summary
-print("Datasets combined successfully!")
-print(f"Human sequences: {len(human_df)}")
-print(f"Computer sequences: {len(computer_df)}")
-print(f"Total sequences: {len(combined_df)}")
-print(f"\nLabel distribution:\n{combined_df['label'].value_counts().sort_index()}")
-print(f"\nOutput saved to: {output_file}")
-print(f"Dataset shape: {combined_df.shape}")
+def main() -> None:
+    result = combine_datasets()
+    result.to_csv(OUTPUT_FILE, index=False)
+    print(f"Combined {len(result):,} sequences: {len(result[result.label == 1]):,} human, "
+          f"{len(result[result.label == 0]):,} computer.")
+    print(f"Saved to {OUTPUT_FILE}")
+
+
+if __name__ == "__main__":
+    main()

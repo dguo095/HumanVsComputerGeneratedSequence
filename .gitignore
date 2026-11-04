@@ -21,3 +21,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Generated reports and fitted model artifacts
+Reports/
+Models/*.joblib
+
+# Notebook checkpoints and local editor state
+.pytest_cache/
+.coverage

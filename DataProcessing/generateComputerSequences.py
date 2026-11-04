@@ -1,39 +1,43 @@
+"""Generate reproducible computer sequences using label 0 for computer."""
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
 
-# Configuration
-NUM_SEQUENCES = 5000
+import numpy as np
+import pandas as pd
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "Data"
+OUTPUT_FILE = DATA_DIR / "computer_sequences.csv"
+NUM_SEQUENCES = 5_000
 SEQUENCE_LENGTH = 10
 MIN_NUMBER = 1
 MAX_NUMBER = 9
+RANDOM_SEED = 42
 
-# Output path
-data_dir = Path(r"D:\personal projects\humanVsComputerGeneration\Data")
-output_file = data_dir / "computer_sequences.csv"
 
-# Generate computer sequences
-rng = np.random.default_rng(seed=42)
+def generate_computer_sequences(
+    count: int = NUM_SEQUENCES, seed: int = RANDOM_SEED
+) -> pd.DataFrame:
+    """Generate independent uniform draws in the same value range as humans."""
+    if count < 1:
+        raise ValueError("count must be a positive integer")
+    rng = np.random.default_rng(seed)
+    values = rng.integers(
+        MIN_NUMBER, MAX_NUMBER + 1, size=(count, SEQUENCE_LENGTH)
+    )
+    columns = [f"number_{index}" for index in range(1, SEQUENCE_LENGTH + 1)]
+    result = pd.DataFrame(values, columns=columns)
+    result["label"] = 0
+    return result
 
-sequences = rng.integers(
-    low=MIN_NUMBER,
-    high=MAX_NUMBER + 1,
-    size=(NUM_SEQUENCES, SEQUENCE_LENGTH)
-)
 
-# Create DataFrame with 10 number columns
-columns = [f"number_{i}" for i in range(1, SEQUENCE_LENGTH + 1)]
-df = pd.DataFrame(sequences, columns=columns)
+def main() -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    result = generate_computer_sequences()
+    result.to_csv(OUTPUT_FILE, index=False)
+    print(f"Saved {len(result):,} computer sequences to {OUTPUT_FILE}")
 
-# Label: 0 = computer-generated
-df["label"] = 0
 
-# Save to CSV
-df.to_csv(output_file, index=False)
-
-print(f"Generated {NUM_SEQUENCES} computer sequences.")
-print(f"Saved to: {output_file}")
-print("\nFirst 5 sequences:")
-print(df.head())
-print(f"\nDataset shape: {df.shape}")
+if __name__ == "__main__":
+    main()

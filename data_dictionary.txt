@@ -1,2 +1,27 @@
-0 means computer generated
-1 means human generated
+Canonical sequence data schema
+==============================
+
+number_1 ... number_10
+  Integer position in a ten-choice sequence; valid values are 1 through 9.
+
+label
+  0 = computer-generated (independent uniform draws from 1 through 9)
+  1 = human-generated (participant test-trial choices)
+
+Human source fields
+-------------------
+Data/human_data.csv contains participant and questionnaire data. The model
+pipeline uses only number_choices_test_trials and excludes the other fields.
+
+Derived tables
+--------------
+human_sequences.csv       Ten choices and label 1.
+computer_sequences.csv    Ten generated choices and label 0.
+combined_dataset.csv      Shuffled union of both sequence tables.
+clean_combined_dataset.csv Exact duplicate rows removed.
+engineered_features.csv   Sequence summaries plus canonical label.
+
+Modeling caveat
+---------------
+The synthetic class represents one specified generator. Classifier performance
+must not be interpreted as general computer-versus-human detection.
