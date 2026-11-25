@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Human or computer?</title>
+<style>
+  :root {
+    color-scheme: light;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #211b32;
+    background: #f4f0fb;
+    --muted: #5f566d;
+    --accent: #54379f;
+    --border: #e3dbef;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 25% 0%, #e7dbfb 0, transparent 52%), #f4f0fb;
+  }
+  main { width: min(100% - 2rem, 42rem); margin: 0 auto; padding: clamp(2.25rem, 8vw, 5.5rem) 0 2rem; }
+  h1, h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 500; }
+  h1 { font-size: clamp(2.8rem, 8vw, 4.75rem); line-height: 1; letter-spacing: -.058em; margin: 0 0 1rem; }
+  header p { color: var(--muted); font-size: clamp(1rem, 2.5vw, 1.15rem); line-height: 1.55; margin: 0; max-width: 32rem; }
+  .card {
+    margin-top: 1.9rem;
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: clamp(1.15rem, 4vw, 2rem);
+    background: #fff;
+    box-shadow: 0 18px 45px #3a205b0d;
+  }
+  .field-heading { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: .4rem 1rem; margin: 0 0 .6rem; }
+  label { font-weight: 650; }
+  #count { color: var(--muted); font-size: .875rem; font-variant-numeric: tabular-nums; }
+  input {
+    width: 100%;
+    border: 1px solid #c6bbd7;
+    border-radius: .7rem;
+    background: #fbf9ff;
+    color: inherit;
+    font: 500 clamp(1.05rem, 4.6vw, 1.4rem)/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
+    padding: .9rem .95rem;
+  }
+  input::placeholder { color: #756a87; opacity: 1; }
+  input[aria-invalid="true"] { border-color: #a12b49; }
+  :focus-visible { outline: 3px solid #8060cc; outline-offset: 3px; }
+  .hint, .error { margin: .55rem 0 0; font-size: .875rem; line-height: 1.45; }
+  .hint { color: var(--muted); }
+  .error { color: #9f2444; font-weight: 600; }
+  .actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: 1.25rem; }
+  button { border-radius: .65rem; padding: .7rem .95rem; min-height: 2.75rem; font: inherit; font-weight: 650; cursor: pointer; }
+  button[type="submit"] { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+  button[type="submit"]:hover { background: #452982; }
+  #generate { background: #fff; border: 1px solid #c6bbd7; color: var(--accent); }
+  #generate:hover { background: #f5f0ff; }
+  .result { margin-top: 1.5rem; padding-top: 1.15rem; border-top: 1px solid var(--border); }
+  .result > p { color: var(--muted); font-size: .9rem; margin: 0 0 .25rem; }
+  h2 { font-size: clamp(1.7rem, 5.5vw, 2.35rem); line-height: 1.17; margin: 0 0 1rem; letter-spacing: -.025em; }
+  .scores { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: .6rem 0 0; }
+  .scores dt { color: var(--muted); font-size: .875rem; }
+  .scores dd { margin: .12rem 0 0; font-size: 1.08rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .score-bar { display: flex; overflow: hidden; height: .42rem; background: #ccbae8; border-radius: 1rem; }
+  #human-bar { background: var(--accent); }
+  footer { color: var(--muted); font-size: .875rem; line-height: 1.55; margin: 1.1rem .15rem 0; max-width: 38rem; }
+  @media (max-width: 28rem) { .actions > button { width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Human or computer?</h1>
+    <p>Think of 10 numbers from 1 to 9. Repeats are allowed. See where the model thinks your sequence came from.</p>
+  </header>
+  <div class="card">
+    <form id="classifier" novalidate>
+      <div class="field-heading">
+        <label for="sequence">Your sequence</label>
+        <span id="count" aria-hidden="true">0 / 10</span>
+      </div>
+      <input id="sequence" type="text" required maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="input-hint error" placeholder="3 7 2 8 4 1 6 3 9 5">
+      <p class="hint" id="input-hint">Type 10 digits in a row or separate them with spaces or commas.</p>
+      <p class="error" id="error" role="alert" hidden></p>
+      <div class="actions">
+        <button type="submit">Classify sequence</button>
+        <button id="generate" type="button">Generate computer sequence</button>
+      </div>
+    </form>
+    <div aria-live="polite" aria-atomic="true">
+      <section class="result" id="result" aria-labelledby="prediction" hidden>
+        <p>Model prediction</p>
+        <h2 id="prediction"></h2>
+        <div class="score-bar" aria-hidden="true"><div id="human-bar"></div></div>
+        <dl class="scores">
+          <div><dt>Human score</dt><dd id="human-score"></dd></div>
+          <div><dt>Computer score</dt><dd id="computer-score"></dd></div>
+        </dl>
+      </section>
+    </div>
+  </div>
+  <footer>The Random Forest learned from human responses and computer sequences drawn uniformly from 1 to 9. Its scores are guesses about where a sequence came from.</footer>
+  <noscript><p>Enable JavaScript in your browser to run the classifier.</p></noscript>
+</main>
+<script id="forest-data" type="application/json">__FOREST_DATA__</script>
+<script>
+  "use strict";
+
+  // Keep these features in sync with DataProcessing/pipeline.py in the source project.
+  function sequenceFeatures(sequence) {
+    const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+    const std = (values, average) => Math.sqrt(mean(values.map((value) => (value - average) ** 2)));
+    const tally = (values, bins) => {
+      const counts = Array(bins).fill(0);
+      for (const value of values) counts[value]++;
+      return counts;
+    };
+    const longestRun = (differences, continues) => {
+      let longest = 1;
+      let current = 1;
+      for (const step of differences) {
+        current = continues(step) ? current + 1 : 1;
+        longest = Math.max(longest, current);
+      }
+      return longest;
+    };
+    const sorted = sequence.slice().sort((a, b) => a - b);
+    const average = mean(sequence);
+    const counts = tally(sequence, 10).slice(1);
+    const presentCounts = counts.filter((count) => count > 0);
+    const differences = sequence.slice(1).map((number, previous) => number - sequence[previous]);
+    const gaps = differences.map(Math.abs);
+    const gapAverage = mean(gaps);
+    const gapCounts = tally(gaps, 9);
+    const uniqueGaps = gapCounts.filter((count) => count > 0).length;
+    const directions = differences.filter((step) => step !== 0).map(Math.sign);
+    const oddCount = sequence.filter((number) => number % 2 === 1).length;
+    const lowerCount = sequence.filter((number) => number <= 5).length;
+    const features = {
+      unique_count: presentCounts.length,
+      repeat_count: 10 - presentCounts.length,
+      unique_ratio: presentCounts.length / 10,
+      max_frequency: Math.max(...counts),
+      single_occurrence_count: presentCounts.filter((count) => count === 1).length,
+      repeated_value_count: presentCounts.filter((count) => count > 1).length,
+      mean: average,
+      median: (sorted[4] + sorted[5]) / 2,
+      std: std(sequence, average),
+      minimum: sorted[0],
+      maximum: sorted[9],
+      value_range: sorted[9] - sorted[0],
+      adjacent_repeat_count: gapCounts[0],
+      longest_repeat_run: longestRun(differences, (step) => step === 0),
+      mean_adjacent_difference: gapAverage,
+      std_adjacent_difference: std(gaps, gapAverage),
+      max_adjacent_difference: Math.max(...gaps),
+      ascending_pairs: differences.filter((step) => step === 1).length,
+      descending_pairs: differences.filter((step) => step === -1).length,
+      increasing_pairs: differences.filter((step) => step > 0).length,
+      decreasing_pairs: differences.filter((step) => step < 0).length,
+      small_gap_pairs: gaps.filter((gap) => gap <= 2).length,
+      longest_increasing_run: longestRun(differences, (step) => step > 0),
+      longest_decreasing_run: longestRun(differences, (step) => step < 0),
+      direction_changes: directions.slice(1).filter((direction, previous) => direction !== directions[previous]).length,
+      entropy: -presentCounts.reduce((sum, count) => sum + (count / 10) * Math.log2(count / 10), 0),
+      odd_count: oddCount,
+      even_count: 10 - oddCount,
+      parity_changes: gaps.filter((gap) => gap % 2 === 1).length,
+      lower_range_count: lowerCount,
+      upper_range_count: 10 - lowerCount,
+      gap_unique_count: uniqueGaps,
+      gap_repeat_count: 9 - uniqueGaps,
+      max_gap_frequency: Math.max(...gapCounts),
+      distinct_adjacent_pairs: new Set(sequence.slice(1).map((number, previous) => sequence[previous] * 10 + number)).size,
+      local_peaks: differences.slice(1).filter((step, previous) => step < 0 && differences[previous] > 0).length,
+      local_valleys: differences.slice(1).filter((step, previous) => step > 0 && differences[previous] < 0).length,
+    };
+    counts.forEach((count, index) => { features[`count_${index + 1}`] = count; });
+    return features;
+  }
+
+  function loadForest(encoded) {
+    const { columns, roots, nodes } = JSON.parse(encoded);
+    const decoded = atob(nodes);
+    const bytes = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+    return { columns, roots, nodes: new DataView(bytes.buffer) };
+  }
+
+  function classify(sequence, forest) {
+    const features = sequenceFeatures(sequence);
+    // scikit-learn converts prediction inputs to float32 before traversing each tree.
+    const values = Float32Array.from(forest.columns, (column) => features[column]);
+    let human = 0;
+    let computer = 0;
+    for (const root of forest.roots) {
+      let node = root;
+      for (;;) {
+        const offset = node * 12;
+        const feature = forest.nodes.getInt16(offset, true);
+        const value = forest.nodes.getFloat64(offset + 4, true);
+        if (feature === -1) {
+          human += value;
+          computer += 1 - value;
+          break;
+        }
+        const rightOffset = forest.nodes.getUint16(offset + 2, true);
+        node += values[feature] <= value ? 1 : rightOffset;
+      }
+    }
+    return { human: human / forest.roots.length, computer: computer / forest.roots.length };
+  }
+
+  function parseSequence(input) {
+    const text = input.trim();
+    if (!text) return [];
+    if (/^\d+$/.test(text)) return Array.from(text, Number);
+    if (!/^\d+(?:(?:\s*,\s*|\s+)\d+)*$/.test(text)) return null;
+    const tokens = text.split(/[\s,]+/);
+    return tokens.every((token) => token.length === 1) ? tokens.map(Number) : null;
+  }
+
+  function generateSequence() {
+    const sequence = [];
+    const bytes = new Uint8Array(16);
+    while (sequence.length < 10) {
+      crypto.getRandomValues(bytes);
+      for (const byte of bytes) {
+        // Accept 252 values so each digit has the same number of representatives.
+        if (byte < 252) sequence.push(1 + byte % 9);
+        if (sequence.length === 10) break;
+      }
+    }
+    return sequence;
+  }
+
+  const forestData = document.querySelector("#forest-data");
+  const input = document.querySelector("#sequence");
+  const result = document.querySelector("#result");
+  const count = document.querySelector("#count");
+  const error = document.querySelector("#error");
+  let forest;
+
+  function updateInput() {
+    const sequence = parseSequence(input.value);
+    count.textContent = sequence ? `${sequence.length} / 10` : "– / 10";
+    error.hidden = true;
+    error.textContent = "";
+    input.removeAttribute("aria-invalid");
+    result.hidden = true;
+  }
+
+  function showError(message) {
+    error.textContent = message;
+    error.hidden = false;
+    input.setAttribute("aria-invalid", "true");
+    input.focus();
+  }
+
+  input.addEventListener("input", updateInput);
+  document.querySelector("#generate").addEventListener("click", () => {
+    input.value = generateSequence().join(" ");
+    updateInput();
+    input.focus();
+  });
+  document.querySelector("#classifier").addEventListener("submit", (event) => {
+    event.preventDefault();
+    updateInput();
+    const sequence = parseSequence(input.value);
+    if (sequence === null || sequence.some((number) => number < 1 || number > 9)) {
+      showError("Use only single digits from 1 to 9, with spaces or commas between them if you like.");
+      return;
+    }
+    if (sequence.length !== 10) {
+      showError(`Enter exactly 10 numbers. You entered ${sequence.length}.`);
+      return;
+    }
+
+    forest ??= loadForest(forestData.textContent);
+    const { human, computer } = classify(sequence, forest);
+    const formatScore = (score) => `${(score * 100).toFixed(2)}%`;
+    document.querySelector("#prediction").textContent = human > computer ? "Human-generated" : "Computer-generated";
+    document.querySelector("#human-score").textContent = formatScore(human);
+    document.querySelector("#computer-score").textContent = formatScore(computer);
+    document.querySelector("#human-bar").style.width = `${human * 100}%`;
+    result.hidden = false;
+  });
+</script>
+</body>
+</html>
