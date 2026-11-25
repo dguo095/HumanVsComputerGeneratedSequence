@@ -10,7 +10,7 @@ An exploratory machine learning project comparing ten-number choices made by hum
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-Random%20Forest-F7931E?logo=scikitlearn&logoColor=white)
 ![Reproducible](https://img.shields.io/badge/seed-42-2E8B57)
 
-[Quick start](#quick-start) · [Results](#baseline-results) · [Pipeline](#pipeline) · [Limitations](#interpretation-and-limitations)
+[Play the demo](#play-the-demo) · [Quick start](#quick-start) · [Results](#baseline-results) · [Pipeline](#pipeline) · [Limitations](#interpretation-and-limitations)
 
 </div>
 
@@ -28,6 +28,25 @@ An exploratory machine learning project comparing ten-number choices made by hum
 | **Labels** | `0` computer · `1` human |
 
 > **Important:** “Computer-generated” means one specific generator: ten independent uniform draws from 1 through 9. The reported results describe separation of this generator from the available human sample. They do not establish a general detector of computer-generated sequences.
+
+## Play the demo
+
+1. Open [the demo file](Demo/human-or-computer.html) on GitHub and click **Download raw file**. If you already have the repository locally, use `Demo/human-or-computer.html`.
+2. Double-click the downloaded HTML file to open it in your browser. You can share this one file with a friend. It runs offline and needs no Python installation.
+3. Think of **10 numbers from 1 to 9**. Repeats are allowed. Enter them as `3728416395`, `3 7 2 8 4 1 6 3 9 5`, or a comma-separated list, then click **Classify sequence**.
+
+The demo displays the Random Forest's prediction and model scores for both classes. Click **Generate computer sequence** to fill the input with ten independent uniform draws, then classify it to compare. Individual predictions can be wrong.
+
+### Rebuild the demo
+
+After installing the dependencies in [Quick start](#quick-start), run these commands from the repository root:
+
+```sh
+python DataProcessing/pipeline.py
+python Demo/build_demo.py
+```
+
+The first command creates `Models/random_forest.joblib`. The second exports its fitted trees and feature order into `Demo/human-or-computer.html`. Edit `Demo/human-or-computer.template.html` to change the interface or browser-side feature calculations, then rebuild the HTML.
 
 ## Quick start
 
@@ -143,6 +162,7 @@ Data/              Source data and generated sequence tables
 DataProcessing/    Portable scripts and reproducible pipeline
 DataExploration/   Exploratory data analysis notebook
 DataValidation/    Data validation notebook
+Demo/              Standalone browser demo, HTML template, and model exporter
 FeatureEngineering/ Feature construction notebook
 Models/            Model notebooks and generated model artifact
 Reports/           Generated machine-readable evaluation report
